@@ -1,11 +1,36 @@
-<div align="center">
+# EcoRetorna
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+O EcoRetorna é uma aplicação web de incentivo à reciclagem que permite ao participante acompanhar suas atividades de reciclagem, saldo de pontos, equivalência financeira, histórico e impacto ambiental estimado.
 
-  <h1>Built with AI Studio</h2>
+A plataforma também disponibiliza funcionalidades de simulação de pontos, localização de pontos de coleta, ranking de impacto ambiental, conquistas e benefícios demonstrativos.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## Integrantes
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+- [NOME DO INTEGRANTE 1] — Gestão e Análise
+- [NOME DO INTEGRANTE 2] — Solução Técnica
 
-</div>
+## Tecnologias
+
+- React
+- TypeScript
+- Vite
+- Firebase
+- Cloud Firestore
+- Tailwind CSS/CSS
+- Leaflet/OpenStreetMap
+
+## Funcionalidades principais
+
+- Dashboard do participante
+- Simulação de pontos
+- Histórico de reciclagens
+- Impacto ambiental estimado
+- Estatísticas individuais
+- Postos e mapa
+- Ranking de impacto
+- Desafios e conquistas
+- Benefícios, resgates e doações simuladas
+
+## Observação
+
+O projeto possui finalidade acadêmica. Os registros de reciclagem, valores financeiros e impactos ambientais utilizados durante o desenvolvimento podem utilizar dados simulados.
