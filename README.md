@@ -6,8 +6,7 @@ A plataforma também disponibiliza funcionalidades de simulação de pontos, loc
 
 ## Integrantes
 
-- [NOME DO INTEGRANTE 1] — Gestão e Análise
-- [NOME DO INTEGRANTE 2] — Solução Técnica
+- Pablo — Gestão e Análise, Solução Técnica.
 
 ## Tecnologias
 
