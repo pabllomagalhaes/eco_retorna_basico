@@ -1,0 +1,6 @@
+{
+  "name": "EcoRetorna",
+  "description": "Plataforma web de incentivo à reciclagem para acompanhamento de impacto ambiental, pontuação, benefícios e pontos de coleta.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
