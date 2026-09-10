@@ -5,9 +5,8 @@ import {
   PackageCheck,
   Leaf,
   Calculator,
-  Gift,
+  History,
   ArrowRight,
-  Award,
   Sparkles,
 } from 'lucide-react';
 import { useEco } from '../context/EcoContext';
@@ -22,137 +21,161 @@ export const DashboardPage: React.FC = () => {
     totalContainers,
     environmentalImpact,
     recyclingRecords,
-    badges,
   } = useEco();
 
-  // Últimas 3 reciclagens
+  // Últimas reciclagens realizadas (ex: as 3 mais recentes)
   const recentRecycles = recyclingRecords.slice(0, 3);
-  // Conquista recente desbloqueada
-  const recentBadge = badges.find((b) => b.unlocked && b.id === 'badge_green_guardian') || badges[0];
+
+  // Primeiro nome para a saudação
+  const firstName = participant.name ? participant.name.split(' ')[0] : 'Camila';
 
   return (
-    <div className="space-y-6">
-      {/* Banner de Saudação Agradável */}
+    <div className="space-y-6 max-w-5xl mx-auto">
+      {/* Saudação no Topo */}
       <section
-        id="welcome-banner"
-        className="relative overflow-hidden rounded-3xl bg-linear-to-br from-emerald-800 via-emerald-700 to-teal-800 p-6 sm:p-8 text-white shadow-md shadow-emerald-950/10"
+        id="welcome-section"
+        className="rounded-3xl bg-linear-to-br from-emerald-800 via-emerald-700 to-teal-800 p-6 sm:p-8 text-white shadow-md shadow-emerald-950/10"
         aria-labelledby="welcome-heading"
       >
-        <div className="relative z-10 max-w-2xl">
+        <div className="max-w-2xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600/60 px-3 py-1 text-xs font-semibold text-emerald-100 backdrop-blur-xs border border-emerald-400/20">
             <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-            Participante Consciente
+            EcoRetorna • Reciclagem Cidadã
           </span>
-          <h2 id="welcome-heading" className="mt-3 text-2xl sm:text-3xl font-black tracking-tight">
-            Olá, {participant.name.split(' ')[0]} 👋
-          </h2>
-          <p className="mt-1 text-sm sm:text-base text-emerald-100/90 leading-relaxed">
-            Bem-vinda ao EcoRetorna! Cada embalagem entregue nos postos gera pontos para você e reduz emissões para o meio ambiente.
+
+          <h1 id="welcome-heading" className="mt-3 text-2xl sm:text-3xl font-black tracking-tight">
+            Olá, {participant.name || 'Camila Ribeiro'} 👋
+          </h1>
+
+          <p className="mt-1.5 text-sm sm:text-base text-emerald-100/90 leading-relaxed">
+            Acompanhe aqui o saldo gerado pelas suas entregas em pontos de coleta e simule o valor de novas embalagens.
           </p>
 
-          {/* Atalhos Rápidos no Banner */}
+          {/* Acessos Rápidos Obrigatórios: Simular e Histórico */}
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               to="/simular"
-              id="dash-btn-simulate"
+              id="dash-quick-simulate"
               className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs sm:text-sm font-bold text-emerald-900 shadow-sm transition hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-white"
             >
-              <Calculator className="h-4 w-4" aria-hidden="true" />
+              <Calculator className="h-4 w-4 text-emerald-700" aria-hidden="true" />
               Simular Reciclagem
             </Link>
+
             <Link
-              to="/beneficios"
-              id="dash-btn-benefits"
+              to="/historico"
+              id="dash-quick-history"
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-900/60 px-4 py-2.5 text-xs sm:text-sm font-bold text-white backdrop-blur-xs border border-emerald-400/30 transition hover:bg-emerald-900/80 focus-visible:outline-2 focus-visible:outline-white"
             >
-              <Gift className="h-4 w-4" aria-hidden="true" />
-              Ver Benefícios
+              <History className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+              Acessar Histórico
             </Link>
           </div>
         </div>
-
-        {/* Detalhe de fundo suave */}
-        <div
-          className="pointer-events-none absolute -right-12 -bottom-16 h-64 w-64 rounded-full bg-emerald-500/20 blur-2xl"
-          aria-hidden="true"
-        />
       </section>
 
-      {/* Grid de Métricas Principais Resumidas */}
+      {/* Cards de Métricas Principais */}
       <section
-        id="summary-metrics"
-        aria-label="Resumo do participante"
+        id="dashboard-metrics"
+        aria-label="Resumo do saldo e total reciclado"
         className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
       >
-        {/* Card Saldo & Reais */}
-        <div className="flex flex-col justify-between rounded-2xl border border-emerald-100 bg-white p-5 shadow-xs transition hover:shadow-sm">
+        {/* CARD PRINCIPAL: SALDO CALCULADO */}
+        <div
+          id="card-saldo-principal"
+          className="flex flex-col justify-between rounded-2xl border-2 border-emerald-500/30 bg-white p-5 sm:p-6 shadow-xs"
+        >
           <div className="flex items-start justify-between">
             <div>
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Saldo Disponível</span>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Saldo
+              </span>
               <div className="mt-1 flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold text-slate-900">
+                <span className="text-3xl sm:text-4xl font-black text-slate-900">
                   {formatNumberPtBR(pointsBalance)}
                 </span>
-                <span className="text-sm font-semibold text-slate-600">pontos</span>
+                <span className="text-base font-bold text-slate-600">pontos</span>
               </div>
             </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-600 border border-amber-200/50">
-              <Coins className="h-5 w-5" aria-hidden="true" />
+
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 border border-amber-200/50">
+              <Coins className="h-6 w-6" aria-hidden="true" />
             </div>
           </div>
-          <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
-            <span className="text-slate-500 font-medium">Equivalente estimado:</span>
-            <span className="font-bold text-emerald-700 text-sm">
+
+          <div className="mt-4 border-t border-slate-100 pt-3">
+            <span className="block text-xs font-medium text-slate-500">Equivalência financeira estimada:</span>
+            <span className="text-lg font-extrabold text-emerald-700">
               ≈ {formatCurrencyPtBR(reaisEquivalent)}
             </span>
           </div>
         </div>
 
-        {/* Card Embalagens Recicladas */}
-        <div className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-sm">
+        {/* TOTAL DE EMBALAGENS RECICLADAS */}
+        <div
+          id="card-total-reciclado"
+          className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs"
+        >
           <div className="flex items-start justify-between">
             <div>
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Reciclado</span>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Total Reciclado
+              </span>
               <div className="mt-1 flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold text-slate-900">
+                <span className="text-3xl sm:text-4xl font-black text-slate-900">
                   {formatNumberPtBR(totalContainers)}
                 </span>
-                <span className="text-sm font-semibold text-slate-600">embalagens</span>
+                <span className="text-base font-bold text-slate-600">embalagens</span>
               </div>
             </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-200/50">
-              <PackageCheck className="h-5 w-5" aria-hidden="true" />
+
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-200/50">
+              <PackageCheck className="h-6 w-6" aria-hidden="true" />
             </div>
           </div>
-          <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
-            <span>{formatNumberPtBR(environmentalImpact.petCount)} PET</span>
+
+          <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500 font-medium">
+            <span>{environmentalImpact.petCount} garrafas PET</span>
             <span>•</span>
-            <span>{formatNumberPtBR(environmentalImpact.aluminumCount)} Alumínio</span>
+            <span>{environmentalImpact.aluminumCount} latas alumínio</span>
           </div>
         </div>
 
-        {/* Card Impacto CO2e Evitado */}
-        <div className="flex flex-col justify-between rounded-2xl border border-emerald-100 bg-emerald-50/40 p-5 shadow-xs transition hover:shadow-sm sm:col-span-2 lg:col-span-1">
+        {/* IMPACTO AMBIENTAL (PLACEHOLDER ESTIMATIVO) */}
+        <div
+          id="card-impacto-placeholder"
+          className="flex flex-col justify-between rounded-2xl border border-emerald-100 bg-emerald-50/50 p-5 sm:p-6 shadow-xs sm:col-span-2 lg:col-span-1"
+        >
           <div className="flex items-start justify-between">
             <div>
-              <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Impacto Ambiental</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
+                  Impacto Ambiental
+                </span>
+                <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                  Estimativa
+                </span>
+              </div>
+
               <div className="mt-1 flex items-baseline gap-1.5">
-                <span className="text-sm font-medium text-emerald-700">≈</span>
-                <span className="text-3xl font-extrabold text-emerald-950">
+                <span className="text-base font-medium text-emerald-700">≈</span>
+                <span className="text-3xl sm:text-4xl font-black text-emerald-950">
                   {formatNumberPtBR(environmentalImpact.co2eAvoidedKg, 1)}
                 </span>
-                <span className="text-sm font-bold text-emerald-800">kg CO₂e</span>
+                <span className="text-base font-bold text-emerald-800">kg CO₂e</span>
               </div>
             </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs">
-              <Leaf className="h-5 w-5" aria-hidden="true" />
+
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-xs">
+              <Leaf className="h-6 w-6" aria-hidden="true" />
             </div>
           </div>
-          <div className="mt-4 flex items-center justify-between border-t border-emerald-200/50 pt-3 text-xs">
-            <span className="text-emerald-800">Evitados na atmosfera</span>
+
+          <div className="mt-4 flex items-center justify-between border-t border-emerald-200/50 pt-3 text-xs text-emerald-800 font-medium">
+            <span>Evitados na atmosfera</span>
             <Link
               to="/impacto"
-              className="inline-flex items-center gap-1 font-bold text-emerald-700 hover:text-emerald-800"
+              className="inline-flex items-center gap-1 font-bold text-emerald-700 hover:text-emerald-900"
             >
               Ver detalhes <ArrowRight className="h-3 w-3" aria-hidden="true" />
             </Link>
@@ -160,110 +183,76 @@ export const DashboardPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Seções em Grid: Últimas Reciclagens e Conquista Recente */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Lista das Últimas Reciclagens */}
-        <section
-          id="recent-recycling-section"
-          className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs lg:col-span-2"
-          aria-labelledby="recent-recycling-heading"
-        >
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div>
-              <h3 id="recent-recycling-heading" className="text-base font-bold text-slate-900">
-                Últimas Reciclagens
-              </h3>
-              <p className="text-xs text-slate-500">Entregas recentes registradas nos postos de coleta</p>
-            </div>
-            <Link
-              to="/historico"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 focus-visible:outline-2 focus-visible:outline-emerald-600"
-            >
-              Ver todo o histórico <ArrowRight className="h-3 w-3" aria-hidden="true" />
-            </Link>
+      {/* Seção: Últimas Reciclagens */}
+      <section
+        id="recent-recyclings-section"
+        aria-labelledby="recent-recyclings-heading"
+        className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs"
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h2 id="recent-recyclings-heading" className="text-lg font-bold text-slate-900">
+              Últimas reciclagens
+            </h2>
+            <p className="text-xs text-slate-500">
+              Registros mais recentes de embalagens entregues
+            </p>
           </div>
 
-          <div className="divide-y divide-slate-100 pt-1">
-            {recentRecycles.map((rec) => (
-              <div key={rec.id} className="flex items-center justify-between py-3.5">
-                <div className="flex items-center gap-3">
+          <Link
+            to="/historico"
+            id="dash-link-all-history"
+            className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-emerald-700 hover:text-emerald-900 focus-visible:outline-2 focus-visible:outline-emerald-600"
+          >
+            Ver histórico completo <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
+        </div>
+
+        <div className="divide-y divide-slate-100 pt-1">
+          {recentRecycles.map((rec) => {
+            const isPet = rec.materialCategory === 'pet';
+            const materialDisplay = isPet ? 'PET 2 L' : 'Lata de alumínio';
+            const [year, month, day] = rec.date.split('-');
+            const displayDate = year && month && day ? `${day}/${month}/${year}` : rec.date;
+
+            return (
+              <div key={rec.id} className="flex items-center justify-between py-4">
+                <div className="flex items-center gap-3.5">
                   <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                      rec.materialCategory === 'pet'
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'bg-amber-50 text-amber-700'
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                      isPet ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'
                     }`}
                   >
                     <PackageCheck className="h-5 w-5" aria-hidden="true" />
                   </div>
+
                   <div>
-                    <span className="block text-sm font-semibold text-slate-800">
-                      {rec.materialName}
-                    </span>
-                    <span className="block text-xs text-slate-500">
-                      {new Date(rec.date).toLocaleDateString('pt-BR')} • {rec.collectionPointName}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-900">{materialDisplay}</span>
+                      <span className="text-xs text-slate-400">•</span>
+                      <span className="text-xs text-slate-500">{displayDate}</span>
+                    </div>
+                    <span className="block text-xs text-slate-500 mt-0.5">
+                      {rec.quantity} {rec.quantity === 1 ? 'unidade' : 'unidades'} • {rec.collectionPointName}
                     </span>
                   </div>
                 </div>
 
                 <div className="text-right">
-                  <span className="block text-sm font-bold text-emerald-700">
-                    +{rec.pointsEarned} pts
+                  <span className="block text-sm sm:text-base font-extrabold text-emerald-700">
+                    +{rec.pointsEarned} pontos
                   </span>
-                  <span className="block text-xs text-slate-500">
-                    {rec.quantity} unidades
+                  <span className="block text-xs font-medium text-slate-500">
+                    ≈ {formatCurrencyPtBR(rec.reaisEquivalent)}
                   </span>
                 </div>
               </div>
-            ))}
-          </div>
-        </section>
+            );
+          })}
+        </div>
+      </section>
 
-        {/* Conquista Recente & Dica */}
-        <section
-          id="recent-badge-section"
-          className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs"
-          aria-labelledby="recent-badge-heading"
-        >
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 id="recent-badge-heading" className="text-base font-bold text-slate-900">
-                Conquista Recente
-              </h3>
-              <Link
-                to="/conquistas"
-                className="text-xs font-semibold text-emerald-700 hover:text-emerald-800"
-              >
-                Todas
-              </Link>
-            </div>
-
-            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/50 p-4 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-amber-700 shadow-xs">
-                <Award className="h-8 w-8" aria-hidden="true" />
-              </div>
-              <h4 className="mt-2 text-sm font-bold text-slate-900">{recentBadge.title}</h4>
-              <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                {recentBadge.description}
-              </p>
-              <span className="mt-2 inline-block rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800">
-                Desbloqueada
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-4 border-t border-slate-100 pt-3">
-            <Link
-              to="/conquistas"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-100 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
-            >
-              Explorar Desafios Sustentáveis
-            </Link>
-          </div>
-        </section>
-      </div>
-
-      {/* Nota de Estimativa */}
+      {/* Nota Legal e Educativa */}
       <DisclaimerNotice />
     </div>
   );

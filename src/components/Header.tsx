@@ -6,12 +6,12 @@ import { formatCurrencyPtBR, formatNumberPtBR } from '../utils/scoring';
 
 const PAGE_TITLES: Record<string, { title: string; subtitle?: string }> = {
   '/': { title: 'Início', subtitle: 'Painel do Participante' },
-  '/simular': { title: 'Simular Reciclagem', subtitle: 'Calculadora de pontos e impacto' },
-  '/historico': { title: 'Histórico de Entregas', subtitle: 'Registros de reciclagens realizadas' },
+  '/simular': { title: 'Simule sua reciclagem', subtitle: 'Descubra quantos pontos suas embalagens podem valer' },
+  '/historico': { title: 'Meu Histórico', subtitle: 'Registros de reciclagens realizadas' },
   '/impacto': { title: 'Meu Impacto', subtitle: 'Estimativa de benefícios ambientais' },
   '/estatisticas': { title: 'Minhas Estatísticas', subtitle: 'Análise pessoal de evolução' },
-  '/postos': { title: 'Postos & Mapa', subtitle: 'Localização de pontos de coleta' },
-  '/ranking': { title: 'Ranking de Impacto', subtitle: 'Classificação por CO₂e evitado' },
+  '/postos': { title: 'Postos & Mapa', subtitle: 'Encontre locais onde você pode destinar suas embalagens recicláveis' },
+  '/ranking': { title: 'Ranking de Impacto', subtitle: 'Classificação comunitária por CO₂e evitado estimado' },
   '/conquistas': { title: 'Desafios & Badges', subtitle: 'Conquistas e marcos alcançados' },
   '/beneficios': { title: 'Benefícios', subtitle: 'Resgate e doação de pontos' },
   '/eventos': { title: 'Eventos & Alertas', subtitle: 'Ações e campanhas comunitárias' },
@@ -78,10 +78,10 @@ export const Header: React.FC = () => {
           aria-label={`Perfil de ${participant.name}`}
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-200">
-            {participant.name.slice(0, 2).toUpperCase()}
+            {participant.name ? participant.name.slice(0, 2).toUpperCase() : 'CR'}
           </div>
           <span className="hidden text-sm font-medium text-slate-700 sm:inline">
-            {participant.name.split(' ')[0]}
+            {participant.name ? participant.name.split(' ')[0] : 'Camila'}
           </span>
         </Link>
       </div>

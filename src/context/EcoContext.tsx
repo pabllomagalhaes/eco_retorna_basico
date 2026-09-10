@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import {
   Badge,
+  Challenge,
   Donation,
   Participant,
   RecyclingRecord,
@@ -8,7 +9,13 @@ import {
 } from '../types';
 import { EcoState, StorageService } from '../services/storage';
 import { calculateEnvironmentalImpact, EnvironmentalImpactResult } from '../utils/environmental';
-import { pointsToReais } from '../utils/scoring';
+import { calculateBadges, calculateChallenges } from '../utils/gamification';
+import {
+  calcularSaldoPontos,
+  calcularTotalEmbalagens,
+  calcularValorEmReais,
+  pointsToReais,
+} from '../utils/scoring';
 
 interface EcoContextType {
   participant: Participant;
@@ -18,6 +25,7 @@ interface EcoContextType {
   redemptions: Redemption[];
   donations: Donation[];
   badges: Badge[];
+  challenges: Challenge[];
   isLoggedIn: boolean;
 
   // Consistência central de dados
@@ -40,11 +48,6 @@ const EcoContext = createContext<EcoContextType | null>(null);
 export const EcoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<EcoState>(() => StorageService.loadState());
 
-  // Sincronizar alterações de saldo e participante
-  useEffect(() => {
-    StorageService.saveBalance(state.pointsBalance);
-  }, [state.pointsBalance]);
-
   useEffect(() => {
     StorageService.saveParticipant(state.participant);
   }, [state.participant]);
@@ -61,9 +64,9 @@ export const EcoProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     StorageService.saveAuth(state.isLoggedIn);
   }, [state.isLoggedIn]);
 
-  // Cálculos centrais derivados estritamente da lista de reciclagens
+  // Cálculos centrais derivados estritamente da lista de reciclagens e operações
   const totalContainers = useMemo(() => {
-    return state.recyclingRecords.reduce((sum, item) => sum + item.quantity, 0);
+    return calcularTotalEmbalagens(state.recyclingRecords);
   }, [state.recyclingRecords]);
 
   const petCount = useMemo(() => {
@@ -82,23 +85,45 @@ export const EcoProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return calculateEnvironmentalImpact(petCount, aluminumCount);
   }, [petCount, aluminumCount]);
 
+  // Saldo calculado estritamente a partir dos registros de reciclagem menos resgates e doações
+  const pointsBalance = useMemo(() => {
+    const earned = calcularSaldoPontos(state.recyclingRecords);
+    const spent =
+      state.redemptions.reduce((s, r) => s + r.pointsSpent, 0) +
+      state.donations.reduce((s, d) => s + d.pointsDonated, 0);
+    return Math.max(0, earned - spent);
+  }, [state.recyclingRecords, state.redemptions, state.donations]);
+
+  // Sincronizar persistência do saldo
+  useEffect(() => {
+    StorageService.saveBalance(pointsBalance);
+  }, [pointsBalance]);
+
   const reaisEquivalent = useMemo(() => {
-    return pointsToReais(state.pointsBalance);
-  }, [state.pointsBalance]);
+    return calcularValorEmReais(pointsBalance);
+  }, [pointsBalance]);
+
+  // Badges e desafios derivados estritamente dos registros reais de reciclagem
+  const badges = useMemo(() => {
+    return calculateBadges(state.recyclingRecords);
+  }, [state.recyclingRecords]);
+
+  const challenges = useMemo(() => {
+    return calculateChallenges(state.recyclingRecords);
+  }, [state.recyclingRecords]);
 
   // Ação de Simular Resgate
   const redeemPoints = (points: number, description = 'Resgate de benefício em créditos'): { success: boolean; message: string } => {
     if (points <= 0) {
       return { success: false, message: 'Selecione uma quantidade positiva de pontos para resgatar.' };
     }
-    if (points > state.pointsBalance) {
+    if (points > pointsBalance) {
       return {
         success: false,
-        message: `Saldo insuficiente. Você possui ${state.pointsBalance} pontos disponíveis.`,
+        message: 'Saldo de pontos insuficiente.',
       };
     }
 
-    const newBalance = state.pointsBalance - points;
     const reais = pointsToReais(points);
     const newRedemption: Redemption = {
       id: `red_${Date.now()}`,
@@ -111,13 +136,12 @@ export const EcoProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setState((prev) => ({
       ...prev,
-      pointsBalance: newBalance,
       redemptions: [newRedemption, ...prev.redemptions],
     }));
 
     return {
       success: true,
-      message: 'Resgate demonstrativo registrado com sucesso. Nenhuma transferência financeira real foi realizada.',
+      message: 'Resgate demonstrativo registrado. Nenhuma transferência financeira real foi realizada.',
     };
   };
 
@@ -126,14 +150,13 @@ export const EcoProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (points <= 0) {
       return { success: false, message: 'Selecione uma quantidade positiva de pontos para doação.' };
     }
-    if (points > state.pointsBalance) {
+    if (points > pointsBalance) {
       return {
         success: false,
-        message: `Saldo insuficiente para doação. Seu saldo atual é de ${state.pointsBalance} pontos.`,
+        message: 'Saldo de pontos insuficiente.',
       };
     }
 
-    const newBalance = state.pointsBalance - points;
     const reais = pointsToReais(points);
     const newDonation: Donation = {
       id: `don_${Date.now()}`,
@@ -147,13 +170,12 @@ export const EcoProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setState((prev) => ({
       ...prev,
-      pointsBalance: newBalance,
       donations: [newDonation, ...prev.donations],
     }));
 
     return {
       success: true,
-      message: 'Doação demonstrativa registrada. Esta operação não representa transferência financeira real.',
+      message: 'Doação demonstrativa registrada.',
     };
   };
 
@@ -183,12 +205,13 @@ export const EcoProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const value: EcoContextType = {
     participant: state.participant,
-    pointsBalance: state.pointsBalance,
+    pointsBalance,
     reaisEquivalent,
     recyclingRecords: state.recyclingRecords,
     redemptions: state.redemptions,
     donations: state.donations,
-    badges: state.badges,
+    badges,
+    challenges,
     isLoggedIn: state.isLoggedIn,
     totalContainers,
     petCount,

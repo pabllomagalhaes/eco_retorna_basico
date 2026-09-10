@@ -21,6 +21,7 @@ const STORAGE_KEYS = {
   DONATIONS: 'ecoretorna_donations',
   BADGES: 'ecoretorna_badges',
   IS_LOGGED_IN: 'ecoretorna_is_logged_in',
+  READ_ALERTS: 'ecoretorna_read_alerts',
 };
 
 export interface EcoState {
@@ -92,6 +93,19 @@ export const StorageService = {
     localStorage.setItem(STORAGE_KEYS.IS_LOGGED_IN, String(isLoggedIn));
   },
 
+  getReadAlerts(): string[] {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.READ_ALERTS);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveReadAlerts(ids: string[]): void {
+    localStorage.setItem(STORAGE_KEYS.READ_ALERTS, JSON.stringify(ids));
+  },
+
   resetToDemo(): void {
     localStorage.removeItem(STORAGE_KEYS.PARTICIPANT);
     localStorage.removeItem(STORAGE_KEYS.POINTS_BALANCE);
@@ -99,6 +113,7 @@ export const StorageService = {
     localStorage.removeItem(STORAGE_KEYS.REDEMPTIONS);
     localStorage.removeItem(STORAGE_KEYS.DONATIONS);
     localStorage.removeItem(STORAGE_KEYS.BADGES);
+    localStorage.removeItem(STORAGE_KEYS.READ_ALERTS);
     localStorage.setItem(STORAGE_KEYS.IS_LOGGED_IN, 'true');
   },
 };

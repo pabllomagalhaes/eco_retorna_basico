@@ -19,6 +19,7 @@ export interface Participant {
   neighborhood: string;
   avatarUrl?: string;
   notificationsEnabled: boolean;
+  motivationalMessages?: boolean;
   highContrastMode: boolean;
 }
 
@@ -73,6 +74,8 @@ export interface CollectionPoint {
   acceptedMaterials: string[];
   latitude: number;
   longitude: number;
+  description: string;
+  active: boolean;
   notes?: string;
 }
 
@@ -80,12 +83,44 @@ export interface Badge {
   id: string;
   title: string;
   description: string;
+  condition: string;
   iconName: string;
   unlocked: boolean;
   unlockedAt?: string;
   currentProgress?: number;
   targetProgress?: number;
+  unit?: string;
   category: 'iniciante' | 'volume' | 'material' | 'impacto';
+}
+
+export interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  condition: string;
+  currentProgress: number;
+  targetProgress: number;
+  unit: string;
+  category: 'volume' | 'material' | 'impacto';
+  iconName: string;
+  completed: boolean;
+}
+
+export type EcoItemCategory = 'Reciclagem' | 'Sustentabilidade' | 'Coleta seletiva' | 'Comunidade';
+export type EcoItemType = 'evento' | 'alerta';
+
+export interface EcoEventAlert {
+  id: string;
+  title: string;
+  description: string;
+  fullDescription?: string;
+  date: string;
+  time?: string;
+  location?: string;
+  category: EcoItemCategory;
+  type: EcoItemType;
+  active: boolean;
+  severity?: 'info' | 'aviso' | 'sucesso';
 }
 
 export interface EcoEvent {
@@ -94,7 +129,7 @@ export interface EcoEvent {
   description: string;
   date: string;
   location: string;
-  category: 'Mutirão' | 'Oficina' | 'Campanha' | 'Coleta Especial';
+  category: 'Mutirão' | 'Oficina' | 'Campanha' | 'Coleta Especial' | 'Reciclagem' | 'Sustentabilidade' | 'Coleta seletiva';
 }
 
 export interface RankingParticipant {
