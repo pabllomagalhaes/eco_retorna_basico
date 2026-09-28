@@ -28,7 +28,7 @@ export const BottomNav: React.FC = () => {
         aria-label="Navegação inferior mobile"
       >
         <NavLink
-          to="/"
+          to="/app"
           end
           className={({ isActive }) =>
             `flex flex-col items-center justify-center min-w-[56px] min-h-[44px] py-1 transition-colors ${

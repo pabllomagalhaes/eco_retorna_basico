@@ -35,7 +35,9 @@ export const HistoryPage: React.FC = () => {
     // Filtro por Período
     if (periodFilter !== 'all') {
       // Data de referência baseada na data mais recente ou data atual
-      const baseDate = new Date('2026-09-09T23:59:59');
+      const baseDate = recyclingRecords.length
+        ? new Date(Math.max(...recyclingRecords.map((r) => new Date(`${r.date}T23:59:59`).getTime())))
+        : new Date();
       const baseTime = baseDate.getTime();
 
       list = list.filter((item) => {
@@ -217,7 +219,21 @@ export const HistoryPage: React.FC = () => {
       </section>
 
       {/* Lista de Registros ou Estado Vazio */}
-      {filteredRecords.length === 0 ? (
+      {recyclingRecords.length === 0 ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="rounded-2xl border-2 border-dashed border-slate-200 bg-white p-10 text-center"
+        >
+          <PackageCheck className="mx-auto h-12 w-12 text-slate-300" aria-hidden="true" />
+          <h3 className="mt-3 text-base font-bold text-slate-800">
+            Você ainda não possui reciclagens registradas.
+          </h3>
+          <p className="mt-1 text-xs text-slate-500 max-w-md mx-auto">
+            Quando você entregar garrafas PET ou latinhas nos ecopontos parceiros, seu histórico detalhado aparecerá aqui.
+          </p>
+        </div>
+      ) : filteredRecords.length === 0 ? (
         <div
           role="status"
           aria-live="polite"

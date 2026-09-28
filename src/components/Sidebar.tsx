@@ -32,7 +32,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     groupTitle: 'PRINCIPAL',
     items: [
-      { to: '/', label: 'Início', icon: Home },
+      { to: '/app', label: 'Início', icon: Home },
       { to: '/simular', label: 'Simular', icon: Calculator },
       { to: '/historico', label: 'Histórico', icon: History },
     ],
@@ -99,7 +99,7 @@ export const Sidebar: React.FC = () => {
                   <NavLink
                     key={item.to}
                     to={item.to}
-                    end={item.to === '/'}
+                    end={item.to === '/app' || item.to === '/'}
                     className={({ isActive }) =>
                       `flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition-all ${
                         isActive

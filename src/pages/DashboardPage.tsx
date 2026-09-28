@@ -8,6 +8,7 @@ import {
   History,
   ArrowRight,
   Sparkles,
+  Tag,
 } from 'lucide-react';
 import { useEco } from '../context/EcoContext';
 import { formatCurrencyPtBR, formatNumberPtBR } from '../utils/scoring';
@@ -21,13 +22,14 @@ export const DashboardPage: React.FC = () => {
     totalContainers,
     environmentalImpact,
     recyclingRecords,
+    campaigns,
   } = useEco();
 
   // Últimas reciclagens realizadas (ex: as 3 mais recentes)
   const recentRecycles = recyclingRecords.slice(0, 3);
 
   // Primeiro nome para a saudação
-  const firstName = participant.name ? participant.name.split(' ')[0] : 'Camila';
+  const firstName = participant.name ? participant.name.split(' ')[0] : 'Participante';
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -44,7 +46,7 @@ export const DashboardPage: React.FC = () => {
           </span>
 
           <h1 id="welcome-heading" className="mt-3 text-2xl sm:text-3xl font-black tracking-tight">
-            Olá, {participant.name || 'Camila Ribeiro'} 👋
+            Olá, {participant.name || 'Participante'} 👋
           </h1>
 
           <p className="mt-1.5 text-sm sm:text-base text-emerald-100/90 leading-relaxed">
@@ -73,6 +75,63 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Campanhas Promocionais Ativas (exibido apenas quando houver campanhas vigentes) */}
+      {campaigns.length > 0 && (
+        <section
+          id="active-campaigns-section"
+          aria-label="Campanhas promocionais ativas"
+          className="rounded-2xl border border-amber-200 bg-linear-to-r from-amber-50 via-orange-50/40 to-amber-50/80 p-4 sm:p-5 shadow-xs"
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-xs">
+              <Sparkles className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-amber-200/80 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-900">
+                  Campanha Promocional
+                </span>
+                <span className="text-xs font-semibold text-amber-800">
+                  {campaigns.length === 1 ? '1 campanha ativa' : `${campaigns.length} campanhas ativas`}
+                </span>
+              </div>
+              <div className="mt-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                {campaigns.map((camp) => (
+                  <div
+                    key={camp.id}
+                    className="flex flex-col justify-between rounded-xl border border-amber-200/80 bg-white/90 p-3.5 shadow-2xs"
+                  >
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                        <Tag className="h-3.5 w-3.5 text-amber-600 shrink-0" aria-hidden="true" />
+                        <span>{camp.title}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-600 leading-relaxed">
+                        {camp.description}
+                      </p>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between border-t border-amber-100/60 pt-2 text-[11px] font-semibold text-amber-900">
+                      <span className="rounded-md bg-amber-50 px-2 py-0.5 border border-amber-200/60 font-bold">
+                        {camp.type === 'multiplier'
+                          ? `${camp.multiplier}x Pontos`
+                          : `+${camp.bonusPoints} pts a cada ${camp.minimumQuantity} un`}
+                      </span>
+                      <Link
+                        to="/simular"
+                        className="inline-flex items-center gap-1 font-bold text-emerald-700 hover:text-emerald-800"
+                      >
+                        Simular <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Cards de Métricas Principais */}
       <section
@@ -208,48 +267,64 @@ export const DashboardPage: React.FC = () => {
           </Link>
         </div>
 
-        <div className="divide-y divide-slate-100 pt-1">
-          {recentRecycles.map((rec) => {
-            const isPet = rec.materialCategory === 'pet';
-            const materialDisplay = isPet ? 'PET 2 L' : 'Lata de alumínio';
-            const [year, month, day] = rec.date.split('-');
-            const displayDate = year && month && day ? `${day}/${month}/${year}` : rec.date;
+        {recentRecycles.length === 0 ? (
+          <div className="py-8 text-center text-slate-500">
+            <PackageCheck className="mx-auto h-10 w-10 text-slate-300 mb-2" aria-hidden="true" />
+            <p className="text-sm font-semibold text-slate-700">Você ainda não possui reciclagens registradas.</p>
+            <p className="text-xs text-slate-500 mt-1">Entregue suas embalagens em um ecoponto parceiro para começar a pontuar!</p>
+            <div className="mt-4">
+              <Link
+                to="/postos"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition"
+              >
+                Encontrar ecopontos parceiros
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100 pt-1">
+            {recentRecycles.map((rec) => {
+              const isPet = rec.materialCategory === 'pet';
+              const materialDisplay = isPet ? 'PET 2 L' : 'Lata de alumínio';
+              const [year, month, day] = rec.date.split('-');
+              const displayDate = year && month && day ? `${day}/${month}/${year}` : rec.date;
 
-            return (
-              <div key={rec.id} className="flex items-center justify-between py-4">
-                <div className="flex items-center gap-3.5">
-                  <div
-                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
-                      isPet ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'
-                    }`}
-                  >
-                    <PackageCheck className="h-5 w-5" aria-hidden="true" />
+              return (
+                <div key={rec.id} className="flex items-center justify-between py-4">
+                  <div className="flex items-center gap-3.5">
+                    <div
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                        isPet ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'
+                      }`}
+                    >
+                      <PackageCheck className="h-5 w-5" aria-hidden="true" />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-900">{materialDisplay}</span>
+                        <span className="text-xs text-slate-400">•</span>
+                        <span className="text-xs text-slate-500">{displayDate}</span>
+                      </div>
+                      <span className="block text-xs text-slate-500 mt-0.5">
+                        {rec.quantity} {rec.quantity === 1 ? 'unidade' : 'unidades'} • {rec.collectionPointName}
+                      </span>
+                    </div>
                   </div>
 
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-slate-900">{materialDisplay}</span>
-                      <span className="text-xs text-slate-400">•</span>
-                      <span className="text-xs text-slate-500">{displayDate}</span>
-                    </div>
-                    <span className="block text-xs text-slate-500 mt-0.5">
-                      {rec.quantity} {rec.quantity === 1 ? 'unidade' : 'unidades'} • {rec.collectionPointName}
+                  <div className="text-right">
+                    <span className="block text-sm sm:text-base font-extrabold text-emerald-700">
+                      +{rec.pointsEarned} pontos
+                    </span>
+                    <span className="block text-xs font-medium text-slate-500">
+                      ≈ {formatCurrencyPtBR(rec.reaisEquivalent)}
                     </span>
                   </div>
                 </div>
-
-                <div className="text-right">
-                  <span className="block text-sm sm:text-base font-extrabold text-emerald-700">
-                    +{rec.pointsEarned} pontos
-                  </span>
-                  <span className="block text-xs font-medium text-slate-500">
-                    ≈ {formatCurrencyPtBR(rec.reaisEquivalent)}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* Nota Legal e Educativa */}

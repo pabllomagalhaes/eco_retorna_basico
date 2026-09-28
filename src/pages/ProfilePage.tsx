@@ -31,6 +31,7 @@ export const ProfilePage: React.FC = () => {
     updateProfile,
     logout,
     resetToDemoData,
+    isUsingFirebase,
   } = useEco();
 
   const navigate = useNavigate();
@@ -52,6 +53,18 @@ export const ProfilePage: React.FC = () => {
   const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
+
+  // Sincroniza campos locais quando os dados do participante forem carregados do Firestore
+  React.useEffect(() => {
+    if (!isEditing) {
+      setNameInput(participant.name);
+      setEmailInput(participant.email);
+      setNeighborhoodInput(participant.neighborhood);
+      setCityInput(participant.city);
+      setNotificationsEnabled(participant.notificationsEnabled);
+      setMotivationalMessages(participant.motivationalMessages ?? true);
+    }
+  }, [participant, isEditing]);
 
   // Conquistas desbloqueadas derivadas estritamente do sistema de badges
   const unlockedBadges = badges.filter((b) => b.unlocked);
@@ -76,13 +89,13 @@ export const ProfilePage: React.FC = () => {
   };
 
   // Salvar alterações
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) {
       return;
     }
 
-    updateProfile({
+    await updateProfile({
       name: nameInput.trim(),
       email: emailInput.trim(),
       neighborhood: neighborhoodInput.trim() || participant.neighborhood,
@@ -120,13 +133,14 @@ export const ProfilePage: React.FC = () => {
   };
 
   // Encerrar sessão (Sair)
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
   };
 
-  // Restaurar dados padrão de demonstração
+  // Restaurar dados padrão de demonstração (apenas no modo local)
   const handleResetDemo = () => {
+    if (isUsingFirebase) return;
     if (
       window.confirm(
         'Deseja restaurar os dados originais deste protótipo (Camila Ribeiro, 480 pontos e 218 embalagens)?'
@@ -201,7 +215,7 @@ export const ProfilePage: React.FC = () => {
             className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white font-black text-2xl shadow-sm shadow-emerald-700/20"
             aria-hidden="true"
           >
-            {participant.name ? participant.name.slice(0, 2).toUpperCase() : 'CR'}
+            {participant.name ? participant.name.slice(0, 2).toUpperCase() : 'EC'}
           </div>
 
           <div>
@@ -225,11 +239,15 @@ export const ProfilePage: React.FC = () => {
                 <Calendar className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
                 Participante desde: {formattedRegistrationDate}
               </span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
-                {participant.neighborhood}, {participant.city}
-              </span>
+              {(participant.neighborhood || participant.city) && (
+                <>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                    {[participant.neighborhood, participant.city].filter(Boolean).join(', ')}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -355,7 +373,7 @@ export const ProfilePage: React.FC = () => {
                     ? 'border-rose-500 bg-rose-50/20 text-slate-900 focus:border-rose-600'
                     : 'border-slate-300 text-slate-900 focus:border-emerald-600'
                 }`}
-                placeholder="Ex: Camila R. Ribeiro"
+                placeholder="Seu nome completo"
               />
               {errors.name && (
                 <p
@@ -374,7 +392,7 @@ export const ProfilePage: React.FC = () => {
                 htmlFor="input-profile-email"
                 className="block text-xs font-bold text-slate-700 uppercase mb-1"
               >
-                E-mail Demonstrativo *
+                E-mail *
               </label>
               <input
                 id="input-profile-email"
@@ -393,7 +411,7 @@ export const ProfilePage: React.FC = () => {
                     ? 'border-rose-500 bg-rose-50/20 text-slate-900 focus:border-rose-600'
                     : 'border-slate-300 text-slate-900 focus:border-emerald-600'
                 }`}
-                placeholder="nome@dominio.demo"
+                placeholder="seu.email@exemplo.com"
               />
               {errors.email && (
                 <p
@@ -420,7 +438,7 @@ export const ProfilePage: React.FC = () => {
                 value={neighborhoodInput}
                 onChange={(e) => setNeighborhoodInput(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
-                placeholder="Ex: Batel"
+                placeholder="Seu bairro"
               />
             </div>
 
@@ -438,7 +456,7 @@ export const ProfilePage: React.FC = () => {
                 value={cityInput}
                 onChange={(e) => setCityInput(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
-                placeholder="Ex: Curitiba"
+                placeholder="Sua cidade"
               />
             </div>
           </div>
@@ -610,39 +628,41 @@ export const ProfilePage: React.FC = () => {
         </button>
       </section>
 
-      {/* 7. ZONA DE DEMONSTRAÇÃO E RESTAURAÇÃO */}
-      <section
-        id="demo-zone-section"
-        className="rounded-3xl border border-slate-200/80 bg-slate-50 p-6 shadow-xs space-y-3"
-        aria-labelledby="demo-zone-heading"
-      >
-        <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
-          <RotateCcw className="h-4 w-4 text-slate-500" aria-hidden="true" />
-          <h3 id="demo-zone-heading">Zona de Demonstração e Testes Acadêmicos</h3>
-        </div>
-        <p className="text-xs text-slate-600 leading-relaxed">
-          Para restaurar os valores padrão da avaliação (Camila Ribeiro com 480 pontos iniciais, 218 embalagens registradas e 4 conquistas), clique no botão abaixo.
-        </p>
+      {/* 7. ZONA DE DEMONSTRAÇÃO E RESTAURAÇÃO (APENAS MODO LOCAL SEM FIREBASE) */}
+      {!isUsingFirebase && (
+        <section
+          id="demo-zone-section"
+          className="rounded-3xl border border-slate-200/80 bg-slate-50 p-6 shadow-xs space-y-3"
+          aria-labelledby="demo-zone-heading"
+        >
+          <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
+            <RotateCcw className="h-4 w-4 text-slate-500" aria-hidden="true" />
+            <h3 id="demo-zone-heading">Zona de Demonstração e Testes Acadêmicos</h3>
+          </div>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Para restaurar os valores padrão da avaliação (Camila Ribeiro com 480 pontos iniciais, 218 embalagens registradas e 4 conquistas), clique no botão abaixo.
+          </p>
 
-        <div className="flex items-center gap-3 pt-1">
-          <button
-            type="button"
-            id="btn-reset-demo"
-            onClick={handleResetDemo}
-            className="inline-flex items-center gap-2 rounded-xl bg-white border border-slate-300 px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-100 transition focus-visible:outline-2 focus-visible:outline-slate-600"
-          >
-            <RotateCcw className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
-            Restaurar Dados Padrão de Demonstração
-          </button>
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="button"
+              id="btn-reset-demo"
+              onClick={handleResetDemo}
+              className="inline-flex items-center gap-2 rounded-xl bg-white border border-slate-300 px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-100 transition focus-visible:outline-2 focus-visible:outline-slate-600"
+            >
+              <RotateCcw className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
+              Restaurar Dados Padrão de Demonstração
+            </button>
 
-          {resetSuccess && (
-            <span className="text-xs font-bold text-emerald-700 flex items-center gap-1">
-              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-              Dados padrão restaurados!
-            </span>
-          )}
-        </div>
-      </section>
+            {resetSuccess && (
+              <span className="text-xs font-bold text-emerald-700 flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                Dados padrão restaurados!
+              </span>
+            )}
+          </div>
+        </section>
+      )}
     </div>
   );
 };

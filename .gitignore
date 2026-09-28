@@ -1,8 +1,27 @@
+# Dependencies
 node_modules/
-build/
+
+# Production Build
 dist/
+build/
 coverage/
-.DS_Store
-*.log
+
+# Environment Variables & Secrets
+.env
+.env.*
 .env*
 !.env.example
+
+# Logs
+*.log
+firebase-debug.log
+
+# Firebase Admin Service Account & Credentials
+serviceAccountKey.json
+*serviceAccount*.json
+*firebase-adminsdk*.json
+credentials/
+
+# OS / Editor Files
+.DS_Store
+Thumbs.db

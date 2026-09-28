@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   CalendarDays,
   Bell,
@@ -13,12 +13,20 @@ import {
   AlertTriangle,
   CheckCircle2,
   CheckCheck,
+  RefreshCw,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
-import { ECO_EVENTS_AND_ALERTS } from '../data/mockData';
-import { EcoEventAlert, EcoItemCategory, EcoItemType } from '../types';
+import { EcoEventAlert, EcoItemType } from '../types';
+import { EventService } from '../services/eventService';
 import { StorageService } from '../services/storage';
 
 export const EventsPage: React.FC = () => {
+  // Estado dos eventos carregados
+  const [events, setEvents] = useState<EcoEventAlert[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
   // Filtros principais
   const [selectedType, setSelectedType] = useState<'all' | EcoItemType>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -32,6 +40,26 @@ export const EventsPage: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<EcoEventAlert | null>(null);
   const modalCloseBtnRef = useRef<HTMLButtonElement>(null);
 
+  // Carregamento dinâmico de eventos via EventService
+  const loadEvents = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await EventService.getEventsAndAlerts();
+      setEvents(data);
+    } catch (err: any) {
+      console.warn('[EcoRetorna] Erro ao carregar eventos:', err);
+      setError('Não foi possível carregar os eventos e alertas no momento.');
+      setEvents([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
+
   // Sincronizar leitura de alertas no localStorage
   const handleToggleRead = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -44,7 +72,7 @@ export const EventsPage: React.FC = () => {
   };
 
   const handleMarkAllAlertsRead = () => {
-    const allAlertIds = ECO_EVENTS_AND_ALERTS.filter((i) => i.type === 'alerta').map(
+    const allAlertIds = events.filter((i) => i.type === 'alerta').map(
       (i) => i.id
     );
     setReadAlertIds(allAlertIds);
@@ -81,29 +109,42 @@ export const EventsPage: React.FC = () => {
       document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedItem]);
+  }, [selectedItem, readAlertIds]);
 
-  // Contadores
-  const totalEvents = ECO_EVENTS_AND_ALERTS.filter((i) => i.type === 'evento').length;
-  const totalAlerts = ECO_EVENTS_AND_ALERTS.filter((i) => i.type === 'alerta').length;
-  const unreadAlertsCount = ECO_EVENTS_AND_ALERTS.filter(
+  // Contadores dinâmicos
+  const totalEvents = events.filter((i) => i.type === 'evento').length;
+  const totalAlerts = events.filter((i) => i.type === 'alerta').length;
+  const unreadAlertsCount = events.filter(
     (i) => i.type === 'alerta' && !readAlertIds.includes(i.id)
   ).length;
 
-  // Filtragem de dados
-  const filteredItems = ECO_EVENTS_AND_ALERTS.filter((item) => {
-    const matchesType = selectedType === 'all' || item.type === selectedType;
-    const matchesCategory =
-      selectedCategory === 'all' || item.category === selectedCategory;
-    return matchesType && matchesCategory;
-  });
+  // Extração dinâmica de categorias a partir dos eventos carregados
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    events.forEach((i) => {
+      if (i.category && i.category.trim()) {
+        set.add(i.category.trim());
+      }
+    });
+    return ['all', ...Array.from(set)];
+  }, [events]);
 
-  const categories: string[] = [
-    'all',
-    'Reciclagem',
-    'Sustentabilidade',
-    'Coleta seletiva',
-  ];
+  // Resetar categoria selecionada se ela não existir mais na lista dinâmica
+  useEffect(() => {
+    if (selectedCategory !== 'all' && !categories.includes(selectedCategory)) {
+      setSelectedCategory('all');
+    }
+  }, [categories, selectedCategory]);
+
+  // Filtragem de dados
+  const filteredItems = useMemo(() => {
+    return events.filter((item) => {
+      const matchesType = selectedType === 'all' || item.type === selectedType;
+      const matchesCategory =
+        selectedCategory === 'all' || item.category === selectedCategory;
+      return matchesType && matchesCategory;
+    });
+  }, [events, selectedType, selectedCategory]);
 
   const getCategoryBadgeClass = (category: string) => {
     switch (category) {
@@ -113,6 +154,12 @@ export const EventsPage: React.FC = () => {
         return 'bg-teal-50 text-teal-800 border-teal-200';
       case 'Coleta seletiva':
         return 'bg-sky-50 text-sky-800 border-sky-200';
+      case 'Mutirão':
+        return 'bg-amber-50 text-amber-900 border-amber-200';
+      case 'Workshop':
+        return 'bg-purple-50 text-purple-900 border-purple-200';
+      case 'Alerta Operacional':
+        return 'bg-rose-50 text-rose-900 border-rose-200';
       default:
         return 'bg-slate-100 text-slate-700 border-slate-200';
     }
@@ -121,250 +168,310 @@ export const EventsPage: React.FC = () => {
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* Cabeçalho */}
-      <div className="border-b border-slate-200 pb-4">
-        <div className="flex items-center gap-2 text-emerald-700 font-semibold text-xs tracking-wider uppercase">
-          <CalendarDays className="h-4 w-4" aria-hidden="true" />
-          Mobilização e Informação
+      <div className="border-b border-slate-200 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-emerald-700 font-semibold text-xs tracking-wider uppercase">
+            <CalendarDays className="h-4 w-4" aria-hidden="true" />
+            Mobilização e Informação
+          </div>
+          <h2 className="mt-1 text-2xl sm:text-3xl font-black text-slate-900">
+            Eventos & Alertas
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Confira ações e informações relacionadas à sustentabilidade.
+          </p>
         </div>
-        <h2 className="mt-1 text-2xl sm:text-3xl font-black text-slate-900">
-          Eventos & Alertas
-        </h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Confira ações e informações relacionadas à sustentabilidade.
-        </p>
+
+        <button
+          type="button"
+          onClick={loadEvents}
+          disabled={isLoading}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition self-start sm:self-auto min-h-[40px]"
+          title="Atualizar lista de eventos"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
+          Atualizar
+        </button>
       </div>
 
-      {/* Barra de Filtros */}
-      <section
-        id="filters-section"
-        className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl bg-white p-4 border border-slate-200 shadow-xs"
-        aria-label="Filtros de eventos e alertas"
-      >
-        {/* Filtro por Tipo */}
-        <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Filtrar por tipo de conteúdo">
-          <button
-            type="button"
-            id="tab-all-items"
-            role="tab"
-            aria-selected={selectedType === 'all'}
-            onClick={() => setSelectedType('all')}
-            className={`rounded-xl px-3.5 py-2 text-xs font-bold transition focus-visible:outline-2 focus-visible:outline-emerald-600 ${
-              selectedType === 'all'
-                ? 'bg-emerald-700 text-white shadow-xs'
-                : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/60'
-            }`}
-          >
-            Todos ({ECO_EVENTS_AND_ALERTS.length})
-          </button>
+      {/* Estado de Carregamento */}
+      {isLoading && (
+        <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center text-slate-500">
+          <Loader2 className="h-8 w-8 mx-auto text-emerald-600 animate-spin mb-3" aria-hidden="true" />
+          <p className="text-sm font-semibold text-slate-700">Carregando eventos e comunicados...</p>
+          <p className="text-xs text-slate-400 mt-1">Buscando programação atualizada.</p>
+        </div>
+      )}
 
+      {/* Estado de Erro Amigável */}
+      {!isLoading && error && (
+        <div className="rounded-3xl border border-rose-200 bg-rose-50/70 p-6 text-center text-rose-900">
+          <AlertCircle className="h-8 w-8 mx-auto text-rose-600 mb-2" aria-hidden="true" />
+          <h3 className="text-sm font-bold">{error}</h3>
+          <p className="text-xs text-rose-700 mt-1">Verifique sua conexão ou tente novamente.</p>
           <button
             type="button"
-            id="tab-events-only"
-            role="tab"
-            aria-selected={selectedType === 'evento'}
-            onClick={() => setSelectedType('evento')}
-            className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition focus-visible:outline-2 focus-visible:outline-emerald-600 ${
-              selectedType === 'evento'
-                ? 'bg-emerald-700 text-white shadow-xs'
-                : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/60'
-            }`}
+            onClick={loadEvents}
+            className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-rose-700"
           >
-            <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-            Próximos Eventos ({totalEvents})
-          </button>
-
-          <button
-            type="button"
-            id="tab-alerts-only"
-            role="tab"
-            aria-selected={selectedType === 'alerta'}
-            onClick={() => setSelectedType('alerta')}
-            className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition focus-visible:outline-2 focus-visible:outline-emerald-600 ${
-              selectedType === 'alerta'
-                ? 'bg-emerald-700 text-white shadow-xs'
-                : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/60'
-            }`}
-          >
-            <Bell className="h-3.5 w-3.5" aria-hidden="true" />
-            Alertas ({totalAlerts})
-            {unreadAlertsCount > 0 && (
-              <span className="ml-0.5 rounded-full bg-amber-500 px-1.5 py-0.2 text-[10px] font-black text-white">
-                {unreadAlertsCount}
-              </span>
-            )}
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+            Tentar novamente
           </button>
         </div>
+      )}
 
-        {/* Filtro por Categoria e Ação de Alertas */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5">
-            <Filter className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
-            <label htmlFor="category-select" className="sr-only">
-              Filtrar por Categoria
-            </label>
-            <select
-              id="category-select"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 focus:border-emerald-600 focus:bg-white focus:outline-none"
-            >
-              <option value="all">Todas as Categorias</option>
-              <option value="Reciclagem">Reciclagem</option>
-              <option value="Sustentabilidade">Sustentabilidade</option>
-              <option value="Coleta seletiva">Coleta seletiva</option>
-            </select>
-          </div>
-
-          {selectedType === 'alerta' && unreadAlertsCount > 0 && (
-            <button
-              type="button"
-              id="mark-all-read-btn"
-              onClick={handleMarkAllAlertsRead}
-              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
-              title="Marcar todos os alertas demonstrativos como lidos"
-            >
-              <CheckCheck className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
-              Marcar todos como lidos
-            </button>
-          )}
-        </div>
-      </section>
-
-      {/* Lista / Grid de Cards */}
-      {filteredItems.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-8 text-center">
-          <Info className="mx-auto h-8 w-8 text-slate-400" aria-hidden="true" />
-          <h3 className="mt-2 text-base font-bold text-slate-800">
-            Nenhum item encontrado
-          </h3>
-          <p className="mt-1 text-xs text-slate-500">
-            Tente selecionar outra categoria ou visualizar todos os registros.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedType('all');
-              setSelectedCategory('all');
-            }}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-emerald-700"
+      {/* Conteúdo Principal quando Carregado */}
+      {!isLoading && !error && (
+        <>
+          {/* Barra de Filtros */}
+          <section
+            id="filters-section"
+            className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl bg-white p-4 border border-slate-200 shadow-xs"
+            aria-label="Filtros de eventos e alertas"
           >
-            Limpar Filtros
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-          {filteredItems.map((item) => {
-            const isAlert = item.type === 'alerta';
-            const isRead = isAlert && readAlertIds.includes(item.id);
-
-            return (
-              <article
-                key={item.id}
-                id={`card-${item.id}`}
-                className={`flex flex-col justify-between rounded-3xl border bg-white p-6 shadow-xs transition hover:border-slate-300 hover:shadow-sm ${
-                  isAlert && !isRead
-                    ? 'border-amber-200/80 bg-amber-50/10'
-                    : 'border-slate-200'
+            {/* Filtro por Tipo */}
+            <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Filtrar por tipo de conteúdo">
+              <button
+                type="button"
+                id="tab-all-items"
+                role="tab"
+                aria-selected={selectedType === 'all'}
+                onClick={() => setSelectedType('all')}
+                className={`rounded-xl px-3.5 py-2 text-xs font-bold transition focus-visible:outline-2 focus-visible:outline-emerald-600 ${
+                  selectedType === 'all'
+                    ? 'bg-emerald-700 text-white shadow-xs'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/60'
                 }`}
               >
-                <div>
-                  {/* Topo do Card: Tipo e Categoria */}
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${getCategoryBadgeClass(
-                          item.category
-                        )}`}
-                      >
-                        <Tag className="h-3 w-3" aria-hidden="true" />
-                        {item.category}
-                      </span>
+                Todos ({events.length})
+              </button>
 
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                          isAlert
-                            ? 'bg-amber-100/70 text-amber-900 border border-amber-200'
-                            : 'bg-emerald-100/70 text-emerald-900 border border-emerald-200'
-                        }`}
-                      >
-                        {isAlert ? (
-                          <Bell className="h-3 w-3 text-amber-700" aria-hidden="true" />
-                        ) : (
-                          <CalendarDays className="h-3 w-3 text-emerald-700" aria-hidden="true" />
+              <button
+                type="button"
+                id="tab-events-only"
+                role="tab"
+                aria-selected={selectedType === 'evento'}
+                onClick={() => setSelectedType('evento')}
+                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition focus-visible:outline-2 focus-visible:outline-emerald-600 ${
+                  selectedType === 'evento'
+                    ? 'bg-emerald-700 text-white shadow-xs'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/60'
+                }`}
+              >
+                <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+                Próximos Eventos ({totalEvents})
+              </button>
+
+              <button
+                type="button"
+                id="tab-alerts-only"
+                role="tab"
+                aria-selected={selectedType === 'alerta'}
+                onClick={() => setSelectedType('alerta')}
+                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition focus-visible:outline-2 focus-visible:outline-emerald-600 ${
+                  selectedType === 'alerta'
+                    ? 'bg-emerald-700 text-white shadow-xs'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/60'
+                }`}
+              >
+                <Bell className="h-3.5 w-3.5" aria-hidden="true" />
+                Alertas ({totalAlerts})
+                {unreadAlertsCount > 0 && (
+                  <span className="ml-0.5 rounded-full bg-amber-500 px-1.5 py-0.2 text-[10px] font-black text-white">
+                    {unreadAlertsCount}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Filtro por Categoria e Ação de Alertas */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <Filter className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                <label htmlFor="category-select" className="sr-only">
+                  Filtrar por Categoria
+                </label>
+                <select
+                  id="category-select"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 focus:border-emerald-600 focus:bg-white focus:outline-none"
+                >
+                  <option value="all">Todas as Categorias</option>
+                  {categories
+                    .filter((c) => c !== 'all')
+                    .map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {selectedType === 'alerta' && unreadAlertsCount > 0 && (
+                <button
+                  type="button"
+                  id="mark-all-read-btn"
+                  onClick={handleMarkAllAlertsRead}
+                  className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
+                  title="Marcar todos os alertas demonstrativos como lidos"
+                >
+                  <CheckCheck className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
+                  Marcar todos como lidos
+                </button>
+              )}
+            </div>
+          </section>
+
+          {/* Coleção Vazia Geral */}
+          {events.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
+              <CalendarDays className="mx-auto h-10 w-10 text-slate-400 mb-3" aria-hidden="true" />
+              <h3 className="text-base font-bold text-slate-800">
+                Nenhum evento ou alerta cadastrado
+              </h3>
+              <p className="mt-1 text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                Nenhuma atividade programada no momento. Fique atento às futuras atualizações do EcoRetorna.
+              </p>
+            </div>
+          ) : filteredItems.length === 0 ? (
+            /* Filtros Sem Resultados */
+            <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-8 text-center">
+              <Info className="mx-auto h-8 w-8 text-slate-400" aria-hidden="true" />
+              <h3 className="mt-2 text-base font-bold text-slate-800">
+                Nenhum item encontrado
+              </h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Tente selecionar outra categoria ou visualizar todos os registros.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedType('all');
+                  setSelectedCategory('all');
+                }}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-emerald-700"
+              >
+                Limpar Filtros
+              </button>
+            </div>
+          ) : (
+            /* Grid de Cards */
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              {filteredItems.map((item) => {
+                const isAlert = item.type === 'alerta';
+                const isRead = isAlert && readAlertIds.includes(item.id);
+
+                return (
+                  <article
+                    key={item.id}
+                    id={`card-${item.id}`}
+                    className={`flex flex-col justify-between rounded-3xl border bg-white p-6 shadow-xs transition hover:border-slate-300 hover:shadow-sm ${
+                      isAlert && !isRead
+                        ? 'border-amber-200/80 bg-amber-50/10'
+                        : 'border-slate-200'
+                    }`}
+                  >
+                    <div>
+                      {/* Topo do Card: Tipo e Categoria */}
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${getCategoryBadgeClass(
+                              item.category
+                            )}`}
+                          >
+                            <Tag className="h-3 w-3" aria-hidden="true" />
+                            {item.category}
+                          </span>
+
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              isAlert
+                                ? 'bg-amber-100/70 text-amber-900 border border-amber-200'
+                                : 'bg-emerald-100/70 text-emerald-900 border border-emerald-200'
+                            }`}
+                          >
+                            {isAlert ? (
+                              <Bell className="h-3 w-3 text-amber-700" aria-hidden="true" />
+                            ) : (
+                              <CalendarDays className="h-3 w-3 text-emerald-700" aria-hidden="true" />
+                            )}
+                            {isAlert ? 'Alerta Informativo' : 'Evento Comunitário'}
+                          </span>
+                        </div>
+
+                        {/* Status de lido para alertas */}
+                        {isAlert && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleToggleRead(item.id, e)}
+                            className={`text-[11px] font-medium transition ${
+                              isRead
+                                ? 'text-slate-400 hover:text-slate-600'
+                                : 'text-amber-700 font-bold hover:underline'
+                            }`}
+                            title={isRead ? 'Marcar como não lido' : 'Marcar como lido'}
+                          >
+                            {isRead ? 'Lido' : '• Não lido'}
+                          </button>
                         )}
-                        {isAlert ? 'Alerta Informativo' : 'Evento Comunitário'}
-                      </span>
-                    </div>
-
-                    {/* Status de lido para alertas */}
-                    {isAlert && (
-                      <button
-                        type="button"
-                        onClick={(e) => handleToggleRead(item.id, e)}
-                        className={`text-[11px] font-medium transition ${
-                          isRead
-                            ? 'text-slate-400 hover:text-slate-600'
-                            : 'text-amber-700 font-bold hover:underline'
-                        }`}
-                        title={isRead ? 'Marcar como não lido' : 'Marcar como lido'}
-                      >
-                        {isRead ? 'Lido' : '• Não lido'}
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Título do Card */}
-                  <h3 className="mt-3 text-lg font-bold text-slate-900 leading-snug">
-                    {item.title}
-                  </h3>
-
-                  {/* Descrição Curta */}
-                  <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                    {item.description}
-                  </p>
-                </div>
-
-                {/* Rodapé do Card com Data, Horário, Local e Botão Ver Detalhes */}
-                <div className="mt-5 pt-4 border-t border-slate-100 space-y-3">
-                  <div className="space-y-1.5 text-xs text-slate-600">
-                    {/* Data e Horário */}
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
-                      <span className="font-semibold text-slate-800">
-                        {item.date}
-                        {item.time ? ` • ${item.time}` : ''}
-                      </span>
-                    </div>
-
-                    {/* Local */}
-                    {item.location && (
-                      <div className="flex items-start gap-2">
-                        <MapPin className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" aria-hidden="true" />
-                        <span className="text-slate-600">{item.location}</span>
                       </div>
-                    )}
-                  </div>
 
-                  {/* Ação: Ver detalhes */}
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="text-[11px] text-slate-400">
-                      Iniciativa demonstrativa
-                    </span>
-                    <button
-                      type="button"
-                      id={`btn-details-${item.id}`}
-                      onClick={() => setSelectedItem(item)}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-xs font-bold text-emerald-800 hover:bg-emerald-50 hover:border-emerald-200 transition focus-visible:outline-2 focus-visible:outline-emerald-600"
-                    >
-                      <Eye className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />
-                      Ver detalhes
-                    </button>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+                      {/* Título do Card */}
+                      <h3 className="mt-3 text-lg font-bold text-slate-900 leading-snug">
+                        {item.title}
+                      </h3>
+
+                      {/* Descrição Curta */}
+                      <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                        {item.description}
+                      </p>
+                    </div>
+
+                    {/* Rodapé do Card com Data, Horário, Local e Botão Ver Detalhes */}
+                    <div className="mt-5 pt-4 border-t border-slate-100 space-y-3">
+                      <div className="space-y-1.5 text-xs text-slate-600">
+                        {/* Data e Horário */}
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
+                          <span className="font-semibold text-slate-800">
+                            {item.date}
+                            {item.time ? ` • ${item.time}` : ''}
+                          </span>
+                        </div>
+
+                        {/* Local */}
+                        {item.location && (
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" aria-hidden="true" />
+                            <span className="text-slate-600">{item.location}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Ação: Ver detalhes */}
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[11px] text-slate-400">
+                          Iniciativa demonstrativa
+                        </span>
+                        <button
+                          type="button"
+                          id={`btn-details-${item.id}`}
+                          onClick={() => setSelectedItem(item)}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-xs font-bold text-emerald-800 hover:bg-emerald-50 hover:border-emerald-200 transition focus-visible:outline-2 focus-visible:outline-emerald-600"
+                        >
+                          <Eye className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />
+                          Ver detalhes
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
       {/* Nota Informativa sobre Notificações */}

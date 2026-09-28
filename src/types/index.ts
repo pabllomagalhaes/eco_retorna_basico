@@ -8,6 +8,8 @@ export interface MaterialType {
   unit: string;
   pointsPerUnit: number;
   co2eAvoidedKgPerUnit: number; // kg of CO2e avoided per unit recycled
+  co2eFactor?: number;
+  active?: boolean;
 }
 
 export interface Participant {
@@ -21,10 +23,13 @@ export interface Participant {
   notificationsEnabled: boolean;
   motivationalMessages?: boolean;
   highContrastMode: boolean;
+  createdAt?: string;
+  active?: boolean;
 }
 
 export interface RecyclingRecord {
   id: string;
+  userId?: string;
   date: string; // YYYY-MM-DD
   materialId: string;
   materialName: string;
@@ -38,21 +43,44 @@ export interface RecyclingRecord {
 
 export interface Redemption {
   id: string;
+  userId?: string;
+  benefitId?: string;
+  benefitTitle?: string;
   date: string;
   pointsSpent: number;
   reaisValue: number;
   description: string;
   status: 'concluido' | 'processando';
+  demonstrative?: boolean;
+  createdAt?: string;
 }
 
 export interface Donation {
   id: string;
+  userId?: string;
   date: string;
   initiativeId: string;
   initiativeName: string;
   pointsDonated: number;
   reaisValue: number;
   status: 'concluido';
+  demonstrative?: boolean;
+  createdAt?: string;
+}
+
+export type BenefitCategory = 'gift' | 'donation' | 'other';
+
+export interface Benefit {
+  id: string;
+  title: string;
+  description: string;
+  category: BenefitCategory;
+  pointsRequired: number;
+  stock: number | null;
+  active: boolean;
+  imageUrl?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Initiative {
@@ -140,3 +168,34 @@ export interface RankingParticipant {
   containersCount: number;
   isCurrentUser?: boolean;
 }
+
+export interface GeneralSettings {
+  pointValueBRL: number;
+  environmentalFactors: {
+    co2eKg: {
+      pet: number;
+      aluminio: number;
+    };
+    disclaimer: string;
+  };
+  initialBonusPoints?: number;
+}
+
+export type CampaignType = 'multiplier' | 'quantity_bonus';
+
+export interface Campaign {
+  id: string;
+  title: string;
+  description: string;
+  type: CampaignType;
+  materialId: string;
+  multiplier?: number;
+  minimumQuantity?: number;
+  bonusPoints?: number;
+  startDate: string; // 'YYYY-MM-DD'
+  endDate: string; // 'YYYY-MM-DD'
+  active: boolean;
+  createdAt?: string;
+  createdBy?: string;
+}
+

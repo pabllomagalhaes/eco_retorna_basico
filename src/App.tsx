@@ -1,7 +1,16 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { EcoProvider, useEco } from './context/EcoContext';
+import { EcoProvider } from './context/EcoContext';
 import { AppLayout } from './layouts/AppLayout';
+import { ProtectedRoute } from './components/ProtectedRoute';
+
+// Páginas Públicas e de Acesso
+import { PublicHomePage } from './pages/PublicHomePage';
+import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
+import { AdminLoginPlaceholderPage } from './pages/AdminLoginPlaceholderPage';
+
+// Páginas Internas do Participante (MVP)
 import { DashboardPage } from './pages/DashboardPage';
 import { SimulatePage } from './pages/SimulatePage';
 import { HistoryPage } from './pages/HistoryPage';
@@ -13,30 +22,35 @@ import { BadgesPage } from './pages/BadgesPage';
 import { BenefitsPage } from './pages/BenefitsPage';
 import { EventsPage } from './pages/EventsPage';
 import { ProfilePage } from './pages/ProfilePage';
-import { LoginPage } from './pages/LoginPage';
-
-// Guarda de rota para login demonstrativo simples
-const ProtectedApp: React.FC = () => {
-  const { isLoggedIn } = useEco();
-
-  if (!isLoggedIn) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <AppLayout />;
-};
 
 export default function App() {
   return (
     <EcoProvider>
       <BrowserRouter>
         <Routes>
-          {/* Rota de Login Simples */}
+          {/* ============================================================ */}
+          {/* ROTAS PÚBLICAS                                               */}
+          {/* ============================================================ */}
+          <Route path="/" element={<PublicHomePage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/cadastro" element={<RegisterPage />} />
+          <Route path="/admin/login" element={<AdminLoginPlaceholderPage />} />
 
-          {/* Rotas Protegidas do Participante */}
-          <Route element={<ProtectedApp />}>
-            <Route path="/" element={<DashboardPage />} />
+          {/* ============================================================ */}
+          {/* ROTAS PROTEGIDAS DO PARTICIPANTE (PAINEL INTERNO)            */}
+          {/* ============================================================ */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          >
+            {/* Dashboard principal */}
+            <Route path="/app" element={<DashboardPage />} />
+            <Route path="/dashboard" element={<Navigate to="/app" replace />} />
+
+            {/* Funcionalidades do participante */}
             <Route path="/simular" element={<SimulatePage />} />
             <Route path="/historico" element={<HistoryPage />} />
             <Route path="/impacto" element={<ImpactPage />} />
@@ -55,7 +69,9 @@ export default function App() {
             <Route path="/mapa" element={<Navigate to="/postos" replace />} />
           </Route>
 
-          {/* Redirecionamento padrão */}
+          {/* ============================================================ */}
+          {/* REDIRECIONAMENTO PADRÃO                                      */}
+          {/* ============================================================ */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

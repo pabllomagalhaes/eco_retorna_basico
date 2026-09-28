@@ -34,8 +34,21 @@ export interface EcoState {
   isLoggedIn: boolean;
 }
 
+const isBrowser = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+
 export const StorageService = {
   loadState(): EcoState {
+    if (!isBrowser) {
+      return {
+        participant: INITIAL_PARTICIPANT,
+        pointsBalance: 480,
+        recyclingRecords: INITIAL_RECYCLING_RECORDS,
+        redemptions: INITIAL_REDEMPTIONS,
+        donations: INITIAL_DONATIONS,
+        badges: BADGES,
+        isLoggedIn: true,
+      };
+    }
     try {
       const storedParticipant = localStorage.getItem(STORAGE_KEYS.PARTICIPANT);
       const storedBalance = localStorage.getItem(STORAGE_KEYS.POINTS_BALANCE);
@@ -70,30 +83,48 @@ export const StorageService = {
   },
 
   saveParticipant(participant: Participant): void {
+    if (!isBrowser) return;
     localStorage.setItem(STORAGE_KEYS.PARTICIPANT, JSON.stringify(participant));
   },
 
   saveBalance(balance: number): void {
+    if (!isBrowser) return;
     localStorage.setItem(STORAGE_KEYS.POINTS_BALANCE, String(balance));
   },
 
   saveRedemptions(redemptions: Redemption[]): void {
+    if (!isBrowser) return;
     localStorage.setItem(STORAGE_KEYS.REDEMPTIONS, JSON.stringify(redemptions));
   },
 
   saveDonations(donations: Donation[]): void {
+    if (!isBrowser) return;
     localStorage.setItem(STORAGE_KEYS.DONATIONS, JSON.stringify(donations));
   },
 
   saveBadges(badges: Badge[]): void {
+    if (!isBrowser) return;
     localStorage.setItem(STORAGE_KEYS.BADGES, JSON.stringify(badges));
   },
 
   saveAuth(isLoggedIn: boolean): void {
+    if (!isBrowser) return;
     localStorage.setItem(STORAGE_KEYS.IS_LOGGED_IN, String(isLoggedIn));
   },
 
+  clearSession(): void {
+    if (!isBrowser) return;
+    localStorage.removeItem(STORAGE_KEYS.PARTICIPANT);
+    localStorage.removeItem(STORAGE_KEYS.POINTS_BALANCE);
+    localStorage.removeItem(STORAGE_KEYS.RECORDS);
+    localStorage.removeItem(STORAGE_KEYS.REDEMPTIONS);
+    localStorage.removeItem(STORAGE_KEYS.DONATIONS);
+    localStorage.removeItem(STORAGE_KEYS.BADGES);
+    localStorage.setItem(STORAGE_KEYS.IS_LOGGED_IN, 'false');
+  },
+
   getReadAlerts(): string[] {
+    if (!isBrowser) return [];
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.READ_ALERTS);
       return stored ? JSON.parse(stored) : [];
@@ -103,10 +134,12 @@ export const StorageService = {
   },
 
   saveReadAlerts(ids: string[]): void {
+    if (!isBrowser) return;
     localStorage.setItem(STORAGE_KEYS.READ_ALERTS, JSON.stringify(ids));
   },
 
   resetToDemo(): void {
+    if (!isBrowser) return;
     localStorage.removeItem(STORAGE_KEYS.PARTICIPANT);
     localStorage.removeItem(STORAGE_KEYS.POINTS_BALANCE);
     localStorage.removeItem(STORAGE_KEYS.RECORDS);

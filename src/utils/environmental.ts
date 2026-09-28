@@ -60,13 +60,14 @@ export function calculateTotalByMaterial(records: RecyclingRecord[]): {
 }
 
 /**
- * Calcula o CO2e evitado estimado total com base nos fatores centrais
- * Retorna número com 1 casa decimal
+ * Calcula o CO2e evitado estimado total somando diretamente os valores
+ * gravados no snapshot histórico (record.co2eAvoidedKg) de cada registro.
+ * NÃO recalcula usando fatores atuais, preservando a imutabilidade histórica.
  */
 export function calculateEstimatedCO2(records: RecyclingRecord[]): number {
   if (!records || !Array.isArray(records)) return 0;
-  const { pet, aluminio } = calculateTotalByMaterial(records);
-  return calculateEstimatedCO2FromCounts(pet, aluminio);
+  const total = records.reduce((sum, item) => sum + (Number(item.co2eAvoidedKg) || 0), 0);
+  return Number(total.toFixed(1));
 }
 
 /**
@@ -96,7 +97,7 @@ export interface MonthlyAggregate {
 }
 
 /**
- * Agrupa registros de reciclagem por mês
+ * Agrupa registros de reciclagem por mês, somando o co2eAvoidedKg histórico de cada registro.
  */
 export function groupRecordsByMonth(records: RecyclingRecord[]): MonthlyAggregate[] {
   const map: Record<string, MonthlyAggregate> = {};
@@ -129,9 +130,11 @@ export function groupRecordsByMonth(records: RecyclingRecord[]): MonthlyAggregat
 
     const qty = Number(record.quantity) || 0;
     const pts = Number(record.pointsEarned) || 0;
+    const co2 = Number(record.co2eAvoidedKg) || 0;
 
     map[ym].containers += qty;
     map[ym].points += pts;
+    map[ym].co2e += co2;
     if (record.materialCategory === 'pet') {
       map[ym].pet += qty;
     } else if (record.materialCategory === 'aluminio') {
@@ -139,9 +142,9 @@ export function groupRecordsByMonth(records: RecyclingRecord[]): MonthlyAggregat
     }
   });
 
-  // Calcula o CO2e para cada mês usando a função central
+  // Formata o co2e acumulado para 1 casa decimal
   Object.values(map).forEach((m) => {
-    m.co2e = calculateEstimatedCO2FromCounts(m.pet, m.aluminio);
+    m.co2e = Number(m.co2e.toFixed(1));
   });
 
   return Object.values(map).sort((a, b) => a.monthKey.localeCompare(b.monthKey));
@@ -188,12 +191,21 @@ export interface EnvironmentalImpactResult {
 
 export function calculateEnvironmentalImpact(
   petCount: number,
-  aluminumCount: number
+  aluminumCount: number,
+  recordsOrCo2e?: RecyclingRecord[] | number
 ): EnvironmentalImpactResult {
   const safePet = Math.max(0, petCount);
   const safeAlu = Math.max(0, aluminumCount);
   const total = safePet + safeAlu;
-  const co2e = calculateEstimatedCO2FromCounts(safePet, safeAlu);
+  let co2e: number;
+
+  if (typeof recordsOrCo2e === 'number') {
+    co2e = Number(recordsOrCo2e.toFixed(1));
+  } else if (Array.isArray(recordsOrCo2e)) {
+    co2e = calculateEstimatedCO2(recordsOrCo2e);
+  } else {
+    co2e = calculateEstimatedCO2FromCounts(safePet, safeAlu);
+  }
 
   return {
     totalContainers: total,

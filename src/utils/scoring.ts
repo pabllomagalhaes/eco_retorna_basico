@@ -1,4 +1,5 @@
 import { MaterialType, RecyclingRecord } from '../types';
+import { environmentalFactors, calculateTotalContainers } from './environmental';
 
 /**
  * Regras centrais de pontuação e conversão financeira do EcoRetorna.
@@ -18,7 +19,7 @@ export const STANDARD_MATERIALS: MaterialType[] = [
     category: 'pet',
     unit: 'unidade',
     pointsPerUnit: POINTS_PER_PET,
-    co2eAvoidedKgPerUnit: 0.18,
+    co2eAvoidedKgPerUnit: environmentalFactors.co2eKg.pet,
     description: 'Embalagem PET de 2 litros limpa e seca',
   },
   {
@@ -27,7 +28,7 @@ export const STANDARD_MATERIALS: MaterialType[] = [
     category: 'aluminio',
     unit: 'unidade',
     pointsPerUnit: POINTS_PER_ALUMINUM,
-    co2eAvoidedKgPerUnit: 0.22,
+    co2eAvoidedKgPerUnit: environmentalFactors.co2eKg.aluminio,
     description: 'Latas de bebidas em alumínio amassadas ou limpas',
   },
 ];
@@ -50,22 +51,19 @@ export const calculatePoints = calcularPontos;
  * valorEmReais = pontos × 0,125
  * Exemplo: 20 pontos × R$ 0,125 = R$ 2,50
  */
-export function calcularValorEmReais(points: number): number {
+export function calcularValorEmReais(points: number, pointValue: number = REAIS_PER_POINT): number {
   if (points <= 0 || isNaN(points)) return 0;
-  return Number((points * REAIS_PER_POINT).toFixed(2));
+  return Number((points * pointValue).toFixed(2));
 }
 
 // Alias para compatibilidade
 export const pointsToReais = calcularValorEmReais;
 
 /**
- * Calcula a quantidade total de embalagens recicladas a partir dos registros
- * Exemplo: soma de todas as quantidades nos registros de histórico
+ * Calcula a quantidade total de embalagens recicladas a partir dos registros.
+ * Centralizado via calculateTotalContainers em environmental.ts.
  */
-export function calcularTotalEmbalagens(records: RecyclingRecord[]): number {
-  if (!records || !Array.isArray(records)) return 0;
-  return records.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
-}
+export const calcularTotalEmbalagens = calculateTotalContainers;
 
 /**
  * Calcula o saldo de pontos derivado diretamente dos registros de reciclagem

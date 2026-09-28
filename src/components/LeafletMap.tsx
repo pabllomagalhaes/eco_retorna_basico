@@ -9,6 +9,22 @@ interface LeafletMapProps {
   onViewDetails?: (point: CollectionPoint) => void;
 }
 
+const FRAIBURGO_CENTER: [number, number] = [-27.0261, -50.9214];
+
+function isValidCoordinate(lat: any, lng: any): boolean {
+  const nLat = Number(lat);
+  const nLng = Number(lng);
+  return (
+    !isNaN(nLat) &&
+    !isNaN(nLng) &&
+    nLat >= -90 &&
+    nLat <= 90 &&
+    nLng >= -180 &&
+    nLng <= 180 &&
+    !(nLat === 0 && nLng === 0)
+  );
+}
+
 export const LeafletMap: React.FC<LeafletMapProps> = ({
   points,
   selectedPointId,
@@ -40,8 +56,8 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         }
 
         const map = L.map('leaflet-map-element', {
-          center: [-25.435, -49.275],
-          zoom: 12,
+          center: FRAIBURGO_CENTER,
+          zoom: 13,
           scrollWheelZoom: false,
         });
 
@@ -84,13 +100,11 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
     markersLayer.clearLayers();
 
-    if (points.length === 0) return;
+    // Filtrar apenas pontos com coordenadas válidas para evitar marcadores falsos
+    const validPoints = points.filter((p) => isValidCoordinate(p.latitude, p.longitude));
 
-    const bounds: [number, number][] = [];
-
-    points.forEach((point) => {
+    validPoints.forEach((point) => {
       const isSelected = point.id === selectedPointId;
-      bounds.push([point.latitude, point.longitude]);
 
       const customIcon = L.divIcon({
         className: 'custom-eco-marker',
@@ -121,7 +135,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         icon: customIcon,
       }).addTo(markersLayer);
 
-      const materialsHtml = point.acceptedMaterials
+      const materialsHtml = (point.acceptedMaterials || [])
         .map(
           (m) =>
             `<span style="display:inline-block;background:#ecfdf5;color:#065f46;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;margin-right:4px;">${m}</span>`
@@ -132,7 +146,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         <div style="font-family: system-ui, sans-serif; min-width: 180px; padding: 2px;">
           <h4 style="font-size: 13px; font-weight: 700; color: #0f172a; margin: 0 0 4px 0;">${point.name}</h4>
           <p style="font-size: 11px; color: #475569; margin: 0 0 6px 0;">${point.address}, ${point.neighborhood}</p>
-          <p style="font-size: 11px; color: #047857; margin: 0 0 6px 0; font-weight: 600;">🕒 ${point.operatingHours}</p>
+          <p style="font-size: 11px; color: #047857; margin: 0 0 6px 0; font-weight: 600;">🕒 ${point.operatingHours || point.openingHours || ''}</p>
           <div style="margin-bottom: 8px;">
             <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: #64748b; display: block; margin-bottom: 2px;">Aceita:</span>
             ${materialsHtml}
@@ -145,14 +159,31 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       });
     });
 
-    // Se houver um ponto selecionado específico, centralizar nele com zoom suave
-    if (selectedPointId) {
-      const selected = points.find((p) => p.id === selectedPointId);
-      if (selected) {
-        map.panTo([selected.latitude, selected.longitude]);
-      }
+    // Enquadramento dinâmico dos ecopontos
+    const selected = selectedPointId
+      ? validPoints.find((p) => p.id === selectedPointId)
+      : undefined;
+
+    if (selected) {
+      map.setView([selected.latitude, selected.longitude], 15);
+    } else if (validPoints.length === 1) {
+      map.setView(
+        [validPoints[0].latitude, validPoints[0].longitude],
+        15
+      );
+    } else if (validPoints.length > 1) {
+      const bounds = L.latLngBounds(
+        validPoints.map((p) => [p.latitude, p.longitude])
+      );
+
+      map.fitBounds(bounds, {
+        padding: [30, 30],
+        maxZoom: 15,
+      });
+    } else {
+      map.setView(FRAIBURGO_CENTER, 13);
     }
-  }, [points, selectedPointId, onSelectPoint, onViewDetails]);
+  }, [points, selectedPointId, mapLoaded, onSelectPoint, onViewDetails]);
 
   if (mapError) {
     return (

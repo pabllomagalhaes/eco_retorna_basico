@@ -5,6 +5,7 @@ import { useEco } from '../context/EcoContext';
 import { formatCurrencyPtBR, formatNumberPtBR } from '../utils/scoring';
 
 const PAGE_TITLES: Record<string, { title: string; subtitle?: string }> = {
+  '/app': { title: 'Início', subtitle: 'Painel do Participante' },
   '/': { title: 'Início', subtitle: 'Painel do Participante' },
   '/simular': { title: 'Simule sua reciclagem', subtitle: 'Descubra quantos pontos suas embalagens podem valer' },
   '/historico': { title: 'Meu Histórico', subtitle: 'Registros de reciclagens realizadas' },
@@ -32,7 +33,7 @@ export const Header: React.FC = () => {
       <div className="flex items-center gap-3">
         {/* Marca EcoRetorna no mobile e título de página no desktop */}
         <Link
-          to="/"
+          to="/app"
           id="header-brand-link"
           className="flex items-center gap-2 font-bold text-emerald-800 transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-emerald-600 lg:hidden"
           aria-label="Ir para página inicial do EcoRetorna"
@@ -78,10 +79,10 @@ export const Header: React.FC = () => {
           aria-label={`Perfil de ${participant.name}`}
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-200">
-            {participant.name ? participant.name.slice(0, 2).toUpperCase() : 'CR'}
+            {participant.name ? participant.name.slice(0, 2).toUpperCase() : 'EC'}
           </div>
           <span className="hidden text-sm font-medium text-slate-700 sm:inline">
-            {participant.name ? participant.name.split(' ')[0] : 'Camila'}
+            {participant.name ? participant.name.split(' ')[0] : 'Participante'}
           </span>
         </Link>
       </div>

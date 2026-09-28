@@ -35,8 +35,8 @@ export const RankingPage: React.FC = () => {
     }));
 
     const userEntry = {
-      id: participant.id || 'usr_camila_01',
-      name: participant.name || 'Camila Ribeiro',
+      id: participant.id || 'usr_participant',
+      name: participant.name || 'Você (Participante)',
       containersCount: userContainers,
       co2eAvoidedKg: userCO2e,
       isCurrentUser: true,
