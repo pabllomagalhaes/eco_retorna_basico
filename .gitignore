@@ -25,3 +25,5 @@ credentials/
 # OS / Editor Files
 .DS_Store
 Thumbs.db
+
+.firebase/
